@@ -132,12 +132,21 @@ export function TrackList({ tracks, slug }: { tracks: Track[]; slug: string }) {
                 {track.users?.email || "Unknown"} • {formatDate(track.created_at)}
               </p>
             </div>
-            <button
-              onClick={() => playTrack(track.id)}
-              className="px-3 py-1 text-sm bg-black text-white rounded-md hover:bg-gray-800"
-            >
-              {playingId === track.id ? "Stop" : "Play"}
-            </button>
+            <div className="flex gap-2">
+              <button
+                onClick={() => playTrack(track.id)}
+                className="px-3 py-1 text-sm bg-black text-white rounded-md hover:bg-gray-800"
+              >
+                {playingId === track.id ? "Stop" : "Play"}
+              </button>
+              <a
+                href={`/api/org/${slug}/tracks/${track.id}/download`}
+                download
+                className="px-3 py-1 text-sm border border-black rounded-md hover:bg-gray-100"
+              >
+                Download
+              </a>
+            </div>
           </div>
           {playingId === track.id && audioUrl && (
             <audio

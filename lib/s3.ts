@@ -25,3 +25,12 @@ export async function getDownloadUrl(key: string) {
   });
   return getSignedUrl(s3Client, command, { expiresIn: 3600 });
 }
+
+export async function getDownloadUrlAsAttachment(key: string, filename: string) {
+  const command = new GetObjectCommand({
+    Bucket: process.env.AWS_S3_BUCKET!,
+    Key: key,
+    ResponseContentDisposition: `attachment; filename="${filename}"`,
+  });
+  return getSignedUrl(s3Client, command, { expiresIn: 3600 });
+}
