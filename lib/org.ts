@@ -40,6 +40,18 @@ export async function inviteToOrg(orgId: string, email: string, invitedByClerkId
 
   if (!user) throw new Error("User not found");
 
+  // Check if already invited
+  const { data: existing } = await supabase
+    .from("org_invites")
+    .select("id")
+    .eq("org_id", orgId)
+    .eq("email", email.toLowerCase())
+    .single();
+
+  if (existing) {
+    throw new Error("Email already invited");
+  }
+
   const { data, error } = await supabase
     .from("org_invites")
     .insert({ org_id: orgId, email: email.toLowerCase(), invited_by: user.id })

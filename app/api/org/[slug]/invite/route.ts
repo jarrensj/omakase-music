@@ -1,6 +1,7 @@
 import { auth } from "@clerk/nextjs/server";
 import { supabase } from "@/lib/supabase";
 import { inviteToOrg } from "@/lib/org";
+import { sendInviteEmail } from "@/lib/email";
 import { NextResponse } from "next/server";
 
 export async function POST(
@@ -17,7 +18,7 @@ export async function POST(
   // Get org by slug
   const { data: org } = await supabase
     .from("organizations")
-    .select("id, owner_id")
+    .select("id, name, owner_id")
     .eq("slug", slug)
     .single();
 
@@ -28,7 +29,7 @@ export async function POST(
   // Check if user is owner
   const { data: user } = await supabase
     .from("users")
-    .select("id")
+    .select("id, email")
     .eq("clerk_id", userId)
     .single();
 
@@ -44,8 +45,18 @@ export async function POST(
 
   try {
     const invite = await inviteToOrg(org.id, email, userId);
+
+    // Send email (don't fail invite if email fails)
+    try {
+      await sendInviteEmail(email, org.name, user.email);
+    } catch (emailError) {
+      console.error("Failed to send invite email:", emailError);
+    }
+
     return NextResponse.json(invite);
   } catch (error) {
-    return NextResponse.json({ error: "Failed to invite" }, { status: 500 });
+    console.error("Failed to invite:", error);
+    const message = error instanceof Error ? error.message : "Failed to invite";
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }
