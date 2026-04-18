@@ -8,6 +8,7 @@ import {
   UserButton,
 } from "@clerk/nextjs";
 import "./globals.css";
+import { SyncUser } from "@/components/SyncUser";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -42,6 +43,7 @@ export default function RootLayout({
               <SignUpButton />
             </Show>
             <Show when="signed-in">
+              <SyncUser />
               <UserButton />
             </Show>
           </header>
