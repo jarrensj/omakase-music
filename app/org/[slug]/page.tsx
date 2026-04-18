@@ -2,6 +2,8 @@ import { auth } from "@clerk/nextjs/server";
 import { supabase } from "@/lib/supabase";
 import { notFound } from "next/navigation";
 import { InviteForm } from "./invite-form";
+import { UploadForm } from "./upload-form";
+import { TrackList } from "./track-list";
 
 async function getOrganization(slug: string) {
   const { data, error } = await supabase
@@ -38,6 +40,16 @@ async function getUserMembership(orgId: string, orgOwnerId: string, clerkId: str
   return membership;
 }
 
+async function getTracks(orgId: string) {
+  const { data } = await supabase
+    .from("tracks")
+    .select("*, users(email)")
+    .eq("org_id", orgId)
+    .order("created_at", { ascending: false });
+
+  return data || [];
+}
+
 export default async function OrgPage({
   params,
 }: {
@@ -64,6 +76,8 @@ export default async function OrgPage({
     );
   }
 
+  const tracks = await getTracks(org.id);
+
   return (
     <main className="max-w-4xl mx-auto p-6">
       <h1 className="text-3xl font-bold">{org.name}</h1>
@@ -76,6 +90,16 @@ export default async function OrgPage({
           <InviteForm slug={slug} />
         </div>
       )}
+
+      <div className="mt-8">
+        <h2 className="text-lg font-semibold mb-2">Upload Track</h2>
+        <UploadForm slug={slug} />
+      </div>
+
+      <div className="mt-8">
+        <h2 className="text-lg font-semibold mb-2">Tracks</h2>
+        <TrackList tracks={tracks} slug={slug} />
+      </div>
     </main>
   );
 }
