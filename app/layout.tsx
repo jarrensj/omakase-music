@@ -9,6 +9,7 @@ import {
 } from "@clerk/nextjs";
 import "./globals.css";
 import { SyncUser } from "@/components/SyncUser";
+import { Analytics } from "@vercel/analytics/next";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -48,6 +49,7 @@ export default function RootLayout({
             </Show>
           </header>
           {children}
+          <Analytics />
         </ClerkProvider>
       </body>
     </html>
