@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { Play, Square, Download, MessageCircle, Send } from "lucide-react";
 
 type Note = {
   id: string;
@@ -57,8 +58,9 @@ function TrackNotes({ trackId, slug }: { trackId: string; slug: string }) {
     <div className="mt-3 border-t pt-3">
       <button
         onClick={loadNotes}
-        className="text-sm text-gray-600 hover:underline"
+        className="flex items-center gap-1 text-sm text-gray-600 hover:underline"
       >
+        <MessageCircle size={14} />
         {loaded ? "Notes" : "Show notes"}
       </button>
 
@@ -85,9 +87,9 @@ function TrackNotes({ trackId, slug }: { trackId: string; slug: string }) {
             <button
               onClick={addNote}
               disabled={loading || !newNote.trim()}
-              className="px-3 py-1 text-sm bg-black text-white rounded hover:bg-gray-800 disabled:opacity-50"
+              className="p-2 bg-black text-white rounded hover:bg-gray-800 disabled:opacity-50"
             >
-              Add
+              <Send size={14} />
             </button>
           </div>
         </div>
@@ -135,16 +137,16 @@ export function TrackList({ tracks, slug }: { tracks: Track[]; slug: string }) {
             <div className="flex gap-2">
               <button
                 onClick={() => playTrack(track.id)}
-                className="px-3 py-1 text-sm bg-black text-white rounded-md hover:bg-gray-800"
+                className="p-2 bg-black text-white rounded-md hover:bg-gray-800"
               >
-                {playingId === track.id ? "Stop" : "Play"}
+                {playingId === track.id ? <Square size={16} /> : <Play size={16} />}
               </button>
               <a
                 href={`/api/org/${slug}/tracks/${track.id}/download`}
                 download
-                className="px-3 py-1 text-sm border border-black rounded-md hover:bg-gray-100"
+                className="p-2 border border-black rounded-md hover:bg-gray-100"
               >
-                Download
+                <Download size={16} />
               </a>
             </div>
           </div>
