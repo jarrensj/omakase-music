@@ -1,5 +1,7 @@
+import { auth } from "@clerk/nextjs/server";
 import { supabase } from "@/lib/supabase";
 import { notFound } from "next/navigation";
+import { InviteForm } from "./invite-form";
 
 async function getOrganization(slug: string) {
   const { data, error } = await supabase
@@ -12,22 +14,68 @@ async function getOrganization(slug: string) {
   return data;
 }
 
+async function getUserMembership(orgId: string, orgOwnerId: string, clerkId: string) {
+  const { data: user } = await supabase
+    .from("users")
+    .select("id")
+    .eq("clerk_id", clerkId)
+    .single();
+
+  if (!user) return null;
+
+  // Check if user is owner (for orgs created before memberships)
+  if (user.id === orgOwnerId) {
+    return { role: "owner" };
+  }
+
+  const { data: membership } = await supabase
+    .from("org_memberships")
+    .select("role")
+    .eq("org_id", orgId)
+    .eq("user_id", user.id)
+    .single();
+
+  return membership;
+}
+
 export default async function OrgPage({
   params,
 }: {
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
+  const { userId } = await auth();
   const org = await getOrganization(slug);
 
   if (!org) {
     notFound();
   }
 
+  const membership = userId ? await getUserMembership(org.id, org.owner_id, userId) : null;
+  const isOwner = membership?.role === "owner";
+
+  if (!membership) {
+    return (
+      <main className="max-w-4xl mx-auto p-6">
+        <h1 className="text-3xl font-bold">{org.name}</h1>
+        <p className="text-gray-500 mt-1">/org/{org.slug}</p>
+        <p className="mt-4 text-red-600">You are not a member of this organization.</p>
+      </main>
+    );
+  }
+
   return (
     <main className="max-w-4xl mx-auto p-6">
       <h1 className="text-3xl font-bold">{org.name}</h1>
       <p className="text-gray-500 mt-1">/org/{org.slug}</p>
+      <p className="mt-2 text-green-600">You are a {membership.role} of this organization.</p>
+
+      {isOwner && (
+        <div className="mt-6">
+          <h2 className="text-lg font-semibold mb-2">Invite Member</h2>
+          <InviteForm slug={slug} />
+        </div>
+      )}
     </main>
   );
 }

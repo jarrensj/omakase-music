@@ -1,5 +1,6 @@
 import { auth, currentUser } from "@clerk/nextjs/server";
 import { getOrCreateUser } from "@/lib/supabase";
+import { acceptPendingInvites } from "@/lib/org";
 import { NextResponse } from "next/server";
 
 export async function GET() {
@@ -12,5 +13,11 @@ export async function GET() {
   const email = user?.emailAddresses[0]?.emailAddress;
 
   const dbUser = await getOrCreateUser(userId, email);
+
+  // Check for pending invites and auto-join orgs
+  if (email) {
+    await acceptPendingInvites(userId, email);
+  }
+
   return NextResponse.json(dbUser);
 }
