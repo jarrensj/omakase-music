@@ -168,11 +168,13 @@ function TrackNotes({
           })}
 
           <div className="mt-2 space-y-2">
-            {isActive && (
-              <div className="flex items-center gap-2 text-xs">
+            {(isActive || pendingStart !== null) && (
+              <div className="flex items-center gap-2 text-xs flex-wrap">
                 <button
                   onClick={captureStart}
-                  className="flex items-center gap-1 px-2 py-1 border rounded hover:bg-gray-100"
+                  disabled={!isActive}
+                  title={isActive ? "" : "Play this track to pin a time"}
+                  className="flex items-center gap-1 px-2 py-1 border rounded hover:bg-gray-100 disabled:opacity-50"
                 >
                   <MapPin size={12} />
                   {pendingStart === null
@@ -181,7 +183,7 @@ function TrackNotes({
                 </button>
                 <button
                   onClick={captureEnd}
-                  disabled={pendingStart === null}
+                  disabled={!isActive || pendingStart === null}
                   className="flex items-center gap-1 px-2 py-1 border rounded hover:bg-gray-100 disabled:opacity-50"
                 >
                   <MapPin size={12} />
@@ -293,10 +295,6 @@ export function TrackList({ tracks, slug }: { tracks: Track[]; slug: string }) {
               controls
               autoPlay
               className="w-full mt-2"
-              onEnded={() => {
-                setPlayingId(null);
-                setAudioUrl(null);
-              }}
             />
           )}
           <TrackNotes
