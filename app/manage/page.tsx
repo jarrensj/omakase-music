@@ -51,7 +51,7 @@ export default async function ManagePage() {
 
   if (orgs.length === 0) {
     return (
-      <div className="container max-w-4xl py-8 px-4">
+      <div className="max-w-4xl mx-auto py-8 px-4">
         <h1 className="text-3xl font-bold tracking-tight mb-6">Manage Organizations</h1>
         <Card className="border-dashed">
           <CardContent className="flex flex-col items-center justify-center py-12 text-center">
