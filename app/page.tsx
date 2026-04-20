@@ -3,6 +3,17 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@clerk/nextjs";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Music } from "lucide-react";
 
 export default function Home() {
   const { isSignedIn } = useAuth();
@@ -47,65 +58,75 @@ export default function Home() {
 
   if (!isSignedIn) {
     return (
-      <main className="max-w-4xl mx-auto p-6">
-        <h1 className="text-3xl font-bold">omakase music</h1>
-        <p className="mt-2 text-gray-600">Sign in to get started.</p>
-      </main>
+      <div className="flex flex-col items-center justify-center min-h-[calc(100vh-3.5rem)] px-4">
+        <div className="flex flex-col items-center gap-6 text-center max-w-md">
+          <div className="flex h-16 w-16 items-center justify-center rounded-full bg-primary/10">
+            <Music className="h-8 w-8 text-primary" />
+          </div>
+          <div className="space-y-2">
+            <h1 className="text-4xl font-bold tracking-tight">omakase music</h1>
+            <p className="text-muted-foreground text-lg">
+              Collaborate on music with your team. Upload tracks, share feedback, and create together.
+            </p>
+          </div>
+        </div>
+      </div>
     );
   }
 
   return (
-    <main className="max-w-md mx-auto p-6">
-      <h1 className="text-2xl font-bold mb-6">Create Organization</h1>
+    <div className="flex items-center justify-center min-h-[calc(100vh-3.5rem)] px-4">
+      <Card className="w-full max-w-md">
+        <CardHeader>
+          <CardTitle>Create Organization</CardTitle>
+          <CardDescription>
+            Set up a new workspace for your music team.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="name">Organization Name</Label>
+              <Input
+                id="name"
+                type="text"
+                value={name}
+                onChange={(e) => {
+                  setName(e.target.value);
+                  setSlug(generateSlug(e.target.value));
+                }}
+                placeholder="My Music Team"
+                required
+              />
+            </div>
 
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div>
-          <label htmlFor="name" className="block text-sm font-medium mb-1">
-            Organization Name
-          </label>
-          <input
-            id="name"
-            type="text"
-            value={name}
-            onChange={(e) => {
-              setName(e.target.value);
-              setSlug(generateSlug(e.target.value));
-            }}
-            className="w-full px-3 py-2 border rounded-md"
-            placeholder="My Music Team"
-            required
-          />
-        </div>
+            <div className="space-y-2">
+              <Label htmlFor="slug">URL Slug</Label>
+              <div className="flex items-center gap-1">
+                <span className="text-sm text-muted-foreground">/org/</span>
+                <Input
+                  id="slug"
+                  type="text"
+                  value={slug}
+                  onChange={(e) => setSlug(e.target.value.toLowerCase())}
+                  placeholder="my-music-team"
+                  pattern="[a-z0-9-]+"
+                  required
+                  className="flex-1"
+                />
+              </div>
+            </div>
 
-        <div>
-          <label htmlFor="slug" className="block text-sm font-medium mb-1">
-            URL Slug
-          </label>
-          <div className="flex items-center">
-            <span className="text-gray-500 mr-1">/org/</span>
-            <input
-              id="slug"
-              type="text"
-              value={slug}
-              onChange={(e) => setSlug(e.target.value.toLowerCase())}
-              className="flex-1 px-3 py-2 border rounded-md"
-              placeholder="my-music-team"
-              pattern="[a-z0-9-]+"
-              required
-            />
-          </div>
-        </div>
+            {error && (
+              <p className="text-sm text-destructive">{error}</p>
+            )}
 
-        {error && <p className="text-red-500 text-sm">{error}</p>}
-
-        <button
-          type="submit"
-          disabled={loading}
-          className="w-full py-2 px-4 bg-black text-white rounded-md hover:bg-gray-800 disabled:opacity-50"
-        >
-          {loading ? "Creating..." : "Create Organization"}
-        </button>
-      </form>
-    </main>
+            <Button type="submit" disabled={loading} className="w-full">
+              {loading ? "Creating..." : "Create Organization"}
+            </Button>
+          </form>
+        </CardContent>
+      </Card>
+    </div>
   );
 }

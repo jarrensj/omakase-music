@@ -10,6 +10,8 @@ import {
 import "./globals.css";
 import { SyncUser } from "@/components/SyncUser";
 import { Analytics } from "@vercel/analytics/next";
+import { Button } from "@/components/ui/button";
+import Link from "next/link";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -36,19 +38,37 @@ export default function RootLayout({
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col">
+      <body className="min-h-full flex flex-col bg-background">
         <ClerkProvider>
-          <header className="flex justify-end gap-4 p-4">
-            <Show when="signed-out">
-              <SignInButton />
-              <SignUpButton />
-            </Show>
-            <Show when="signed-in">
-              <SyncUser />
-              <UserButton />
-            </Show>
+          <header className="sticky top-0 z-50 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+            <div className="container flex h-14 items-center justify-between px-4">
+              <Link href="/" className="font-semibold tracking-tight">
+                omakase music
+              </Link>
+              <div className="flex items-center gap-2">
+                <Show when="signed-out">
+                  <SignInButton>
+                    <Button variant="ghost" size="sm">
+                      Sign in
+                    </Button>
+                  </SignInButton>
+                  <SignUpButton>
+                    <Button size="sm">Sign up</Button>
+                  </SignUpButton>
+                </Show>
+                <Show when="signed-in">
+                  <SyncUser />
+                  <Link href="/manage">
+                    <Button variant="ghost" size="sm">
+                      Manage
+                    </Button>
+                  </Link>
+                  <UserButton />
+                </Show>
+              </div>
+            </div>
           </header>
-          {children}
+          <main className="flex-1">{children}</main>
           <Analytics />
         </ClerkProvider>
       </body>

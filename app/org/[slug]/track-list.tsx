@@ -1,7 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { Play, Square, Download, MessageCircle, Send } from "lucide-react";
+import { Play, Square, Download, MessageCircle, Send, Music } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Card, CardContent } from "@/components/ui/card";
+import { Slider } from "@/components/ui/slider";
+import { cn } from "@/lib/utils";
 
 type Note = {
   id: string;
@@ -20,6 +25,7 @@ type Track = {
 function TrackNotes({ trackId, slug }: { trackId: string; slug: string }) {
   const [notes, setNotes] = useState<Note[]>([]);
   const [loaded, setLoaded] = useState(false);
+  const [isOpen, setIsOpen] = useState(false);
   const [newNote, setNewNote] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -29,6 +35,13 @@ function TrackNotes({ trackId, slug }: { trackId: string; slug: string }) {
     const data = await res.json();
     setNotes(data);
     setLoaded(true);
+  };
+
+  const toggleOpen = () => {
+    if (!isOpen && !loaded) {
+      loadNotes();
+    }
+    setIsOpen(!isOpen);
   };
 
   const addNote = async () => {
@@ -55,42 +68,50 @@ function TrackNotes({ trackId, slug }: { trackId: string; slug: string }) {
   };
 
   return (
-    <div className="mt-3 border-t pt-3">
-      <button
-        onClick={loadNotes}
-        className="flex items-center gap-1 text-sm text-gray-600 hover:underline"
+    <div>
+      <Button
+        variant="ghost"
+        size="sm"
+        className="gap-1.5 h-8 px-2"
+        onClick={toggleOpen}
       >
-        <MessageCircle size={14} />
-        {loaded ? "Notes" : "Show notes"}
-      </button>
+        <MessageCircle className="h-4 w-4" />
+        <span className="text-xs">{loaded ? `${notes.length}` : "Notes"}</span>
+      </Button>
 
-      {loaded && (
-        <div className="mt-2 space-y-2">
-          {notes.map((note) => (
-            <div key={note.id} className="text-sm bg-gray-50 p-2 rounded">
-              <p>{note.content}</p>
-              <p className="text-gray-500 text-xs mt-1">
-                {note.users?.email} • {formatDate(note.created_at)}
-              </p>
-            </div>
-          ))}
+      {isOpen && (
+        <div className="mt-3 space-y-3">
+          <div className="space-y-2">
+            {notes.length === 0 && loaded && (
+              <p className="text-sm text-muted-foreground">No notes yet.</p>
+            )}
+            {notes.map((note) => (
+              <div key={note.id} className="text-sm bg-muted/50 rounded-lg p-3">
+                <p className="text-foreground">{note.content}</p>
+                <p className="text-muted-foreground text-xs mt-1.5">
+                  {note.users?.email} &middot; {formatDate(note.created_at)}
+                </p>
+              </div>
+            ))}
+          </div>
 
-          <div className="flex gap-2 mt-2">
-            <input
+          <div className="flex gap-2">
+            <Input
               type="text"
               value={newNote}
               onChange={(e) => setNewNote(e.target.value)}
               placeholder="Add a note..."
-              className="flex-1 px-2 py-1 text-sm border rounded"
+              className="h-9 text-sm"
               onKeyDown={(e) => e.key === "Enter" && addNote()}
             />
-            <button
+            <Button
               onClick={addNote}
               disabled={loading || !newNote.trim()}
-              className="p-2 bg-black text-white rounded hover:bg-gray-800 disabled:opacity-50"
+              size="sm"
+              className="h-9 w-9 p-0"
             >
-              <Send size={14} />
-            </button>
+              <Send className="h-4 w-4" />
+            </Button>
           </div>
         </div>
       )}
@@ -101,11 +122,16 @@ function TrackNotes({ trackId, slug }: { trackId: string; slug: string }) {
 export function TrackList({ tracks, slug }: { tracks: Track[]; slug: string }) {
   const [playingId, setPlayingId] = useState<string | null>(null);
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
+  const [audioElement, setAudioElement] = useState<HTMLAudioElement | null>(null);
+  const [progress, setProgress] = useState(0);
+  const [duration, setDuration] = useState(0);
 
   const playTrack = async (trackId: string) => {
     if (playingId === trackId) {
       setPlayingId(null);
       setAudioUrl(null);
+      setProgress(0);
+      setDuration(0);
       return;
     }
 
@@ -116,54 +142,119 @@ export function TrackList({ tracks, slug }: { tracks: Track[]; slug: string }) {
   };
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleString();
+    return new Date(dateString).toLocaleDateString(undefined, {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    });
+  };
+
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${mins}:${secs.toString().padStart(2, "0")}`;
   };
 
   if (tracks.length === 0) {
-    return <p className="text-gray-500">No tracks uploaded yet.</p>;
+    return (
+      <Card className="border-dashed">
+        <CardContent className="flex flex-col items-center justify-center py-12 text-center">
+          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-muted mb-4">
+            <Music className="h-6 w-6 text-muted-foreground" />
+          </div>
+          <p className="text-muted-foreground">No tracks uploaded yet.</p>
+          <p className="text-sm text-muted-foreground mt-1">
+            Upload your first track to get started.
+          </p>
+        </CardContent>
+      </Card>
+    );
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       {tracks.map((track) => (
-        <div key={track.id} className="border rounded-md p-3">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="font-medium">{track.filename}</p>
-              <p className="text-sm text-gray-500">
-                {track.users?.email || "Unknown"} • {formatDate(track.created_at)}
-              </p>
-            </div>
-            <div className="flex gap-2">
-              <button
-                onClick={() => playTrack(track.id)}
-                className="p-2 bg-black text-white rounded-md hover:bg-gray-800"
-              >
-                {playingId === track.id ? <Square size={16} /> : <Play size={16} />}
-              </button>
-              <a
-                href={`/api/org/${slug}/tracks/${track.id}/download`}
-                download
-                className="p-2 border border-black rounded-md hover:bg-gray-100"
-              >
-                <Download size={16} />
-              </a>
-            </div>
-          </div>
-          {playingId === track.id && audioUrl && (
-            <audio
-              src={audioUrl}
-              controls
-              autoPlay
-              className="w-full mt-2"
-              onEnded={() => {
-                setPlayingId(null);
-                setAudioUrl(null);
-              }}
-            />
+        <Card
+          key={track.id}
+          className={cn(
+            "transition-colors",
+            playingId === track.id && "border-primary/50 bg-primary/5"
           )}
-          <TrackNotes trackId={track.id} slug={slug} />
-        </div>
+        >
+          <CardContent className="p-4">
+            <div className="flex items-center gap-4">
+              <Button
+                onClick={() => playTrack(track.id)}
+                variant={playingId === track.id ? "default" : "outline"}
+                size="icon"
+                className="h-10 w-10 shrink-0"
+              >
+                {playingId === track.id ? (
+                  <Square className="h-4 w-4" />
+                ) : (
+                  <Play className="h-4 w-4" />
+                )}
+              </Button>
+
+              <div className="flex-1 min-w-0">
+                <p className="font-medium truncate">{track.filename}</p>
+                <p className="text-sm text-muted-foreground">
+                  {track.users?.email || "Unknown"} &middot; {formatDate(track.created_at)}
+                </p>
+              </div>
+
+              <div className="flex items-center gap-1">
+                <TrackNotes trackId={track.id} slug={slug} />
+                <a
+                  href={`/api/org/${slug}/tracks/${track.id}/download`}
+                  download
+                  className="inline-flex items-center justify-center h-8 w-8 rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+                >
+                  <Download className="h-4 w-4" />
+                </a>
+              </div>
+            </div>
+
+            {playingId === track.id && audioUrl && (
+              <div className="mt-4 space-y-2">
+                <audio
+                  ref={(el) => setAudioElement(el)}
+                  src={audioUrl}
+                  autoPlay
+                  onTimeUpdate={(e) => {
+                    const audio = e.currentTarget;
+                    setProgress(audio.currentTime);
+                    setDuration(audio.duration || 0);
+                  }}
+                  onEnded={() => {
+                    setPlayingId(null);
+                    setAudioUrl(null);
+                    setProgress(0);
+                    setDuration(0);
+                  }}
+                  className="hidden"
+                />
+                <Slider
+                  value={[progress]}
+                  max={duration || 100}
+                  step={0.1}
+                  onValueChange={(value) => {
+                    const newValue = Array.isArray(value) ? value[0] : value;
+                    if (audioElement) {
+                      audioElement.currentTime = newValue;
+                      setProgress(newValue);
+                    }
+                  }}
+                  className="w-full"
+                />
+                <div className="flex justify-between text-xs text-muted-foreground">
+                  <span>{formatTime(progress)}</span>
+                  <span>{formatTime(duration)}</span>
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
       ))}
     </div>
   );
