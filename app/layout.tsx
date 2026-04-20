@@ -10,7 +10,6 @@ import {
 import "./globals.css";
 import { SyncUser } from "@/components/SyncUser";
 import { Analytics } from "@vercel/analytics/next";
-import { Button } from "@/components/ui/button";
 import Link from "next/link";
 
 const geistSans = Geist({
@@ -41,27 +40,30 @@ export default function RootLayout({
       <body className="min-h-full flex flex-col bg-background">
         <ClerkProvider>
           <header className="sticky top-0 z-50 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-            <div className="container flex h-14 items-center justify-between px-4">
+            <div className="flex h-14 items-center justify-between max-w-4xl mx-auto px-4 w-full">
               <Link href="/" className="font-semibold tracking-tight">
                 omakase music
               </Link>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-3">
                 <Show when="signed-out">
                   <SignInButton>
-                    <Button variant="ghost" size="sm">
+                    <button className="text-sm font-medium hover:text-foreground/80 transition-colors">
                       Sign in
-                    </Button>
+                    </button>
                   </SignInButton>
                   <SignUpButton>
-                    <Button size="sm">Sign up</Button>
+                    <button className="text-sm font-medium px-3 py-1.5 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-colors">
+                      Sign up
+                    </button>
                   </SignUpButton>
                 </Show>
                 <Show when="signed-in">
                   <SyncUser />
-                  <Link href="/manage">
-                    <Button variant="ghost" size="sm">
-                      Manage
-                    </Button>
+                  <Link
+                    href="/manage"
+                    className="text-sm font-medium hover:text-foreground/80 transition-colors"
+                  >
+                    Manage
                   </Link>
                   <UserButton />
                 </Show>
