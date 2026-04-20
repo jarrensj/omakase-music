@@ -2,6 +2,8 @@ import { auth } from "@clerk/nextjs/server";
 import { supabase } from "@/lib/supabase";
 import { redirect } from "next/navigation";
 import { ManageOrg } from "./manage-org";
+import { Card, CardContent } from "@/components/ui/card";
+import { Building2 } from "lucide-react";
 
 async function getUserOwnedOrgs(clerkId: string) {
   const { data: user } = await supabase
@@ -49,10 +51,20 @@ export default async function ManagePage() {
 
   if (orgs.length === 0) {
     return (
-      <main className="max-w-4xl mx-auto p-6">
-        <h1 className="text-3xl font-bold mb-6">Manage Organizations</h1>
-        <p className="text-gray-500">You don't own any organizations.</p>
-      </main>
+      <div className="max-w-4xl mx-auto py-8 px-4">
+        <h1 className="text-3xl font-bold tracking-tight mb-6">Manage Organizations</h1>
+        <Card className="border-dashed">
+          <CardContent className="flex flex-col items-center justify-center py-12 text-center">
+            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-muted mb-4">
+              <Building2 className="h-6 w-6 text-muted-foreground" />
+            </div>
+            <p className="text-muted-foreground">You don't own any organizations yet.</p>
+            <p className="text-sm text-muted-foreground mt-1">
+              Create an organization from the home page to get started.
+            </p>
+          </CardContent>
+        </Card>
+      </div>
     );
   }
 
@@ -65,14 +77,14 @@ export default async function ManagePage() {
   );
 
   return (
-    <main className="max-w-4xl mx-auto p-6">
-      <h1 className="text-3xl font-bold mb-6">Manage Organizations</h1>
+    <div className="container max-w-4xl py-8 px-4">
+      <h1 className="text-3xl font-bold tracking-tight mb-6">Manage Organizations</h1>
 
-      <div className="space-y-8">
+      <div className="space-y-6">
         {orgsWithMembers.map((org) => (
           <ManageOrg key={org.id} org={org} />
         ))}
       </div>
-    </main>
+    </div>
   );
 }

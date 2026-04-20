@@ -4,6 +4,16 @@ import { notFound } from "next/navigation";
 import { InviteForm } from "./invite-form";
 import { UploadForm } from "./upload-form";
 import { TrackList } from "./track-list";
+import { Badge } from "@/components/ui/badge";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
+import { AlertCircle } from "lucide-react";
 
 async function getOrganization(slug: string) {
   const { data, error } = await supabase
@@ -68,38 +78,77 @@ export default async function OrgPage({
 
   if (!membership) {
     return (
-      <main className="max-w-4xl mx-auto p-6">
-        <h1 className="text-3xl font-bold">{org.name}</h1>
-        <p className="text-gray-500 mt-1">/org/{org.slug}</p>
-        <p className="mt-4 text-red-600">You are not a member of this organization.</p>
-      </main>
+      <div className="max-w-4xl mx-auto py-8 px-4">
+        <Card className="border-destructive">
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <AlertCircle className="h-5 w-5 text-destructive" />
+              <CardTitle>{org.name}</CardTitle>
+            </div>
+            <CardDescription>/org/{org.slug}</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-destructive">
+              You are not a member of this organization.
+            </p>
+          </CardContent>
+        </Card>
+      </div>
     );
   }
 
   const tracks = await getTracks(org.id);
 
   return (
-    <main className="max-w-4xl mx-auto p-6">
-      <h1 className="text-3xl font-bold">{org.name}</h1>
-      <p className="text-gray-500 mt-1">/org/{org.slug}</p>
-      <p className="mt-2 text-green-600">You are a {membership.role} of this organization.</p>
-
-      {isOwner && (
-        <div className="mt-6">
-          <h2 className="text-lg font-semibold mb-2">Invite Member</h2>
-          <InviteForm slug={slug} />
+    <div className="max-w-4xl mx-auto py-8 px-4">
+      <div className="flex items-start justify-between mb-6">
+        <div>
+          <div className="flex items-center gap-3">
+            <h1 className="text-3xl font-bold tracking-tight">{org.name}</h1>
+            <Badge variant={isOwner ? "default" : "secondary"}>
+              {membership.role}
+            </Badge>
+          </div>
+          <p className="text-muted-foreground mt-1">/org/{org.slug}</p>
         </div>
-      )}
-
-      <div className="mt-8">
-        <h2 className="text-lg font-semibold mb-2">Upload Track</h2>
-        <UploadForm slug={slug} />
       </div>
 
-      <div className="mt-8">
-        <h2 className="text-lg font-semibold mb-2">Tracks</h2>
-        <TrackList tracks={tracks} slug={slug} />
+      <div className="grid gap-6">
+        {isOwner && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">Invite Member</CardTitle>
+              <CardDescription>
+                Send an invitation to add someone to your organization.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <InviteForm slug={slug} />
+            </CardContent>
+          </Card>
+        )}
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">Upload Track</CardTitle>
+            <CardDescription>
+              Upload an audio file to share with your team.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <UploadForm slug={slug} />
+          </CardContent>
+        </Card>
+
+        <Separator />
+
+        <div>
+          <h2 className="text-xl font-semibold mb-4">
+            Tracks {tracks.length > 0 && <span className="text-muted-foreground font-normal">({tracks.length})</span>}
+          </h2>
+          <TrackList tracks={tracks} slug={slug} />
+        </div>
       </div>
-    </main>
+    </div>
   );
 }

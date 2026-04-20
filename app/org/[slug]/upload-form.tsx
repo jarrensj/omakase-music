@@ -1,19 +1,23 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
+import { Button } from "@/components/ui/button";
+import { Upload, Loader2, CheckCircle } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 export function UploadForm({ slug }: { slug: string }) {
   const router = useRouter();
+  const inputRef = useRef<HTMLInputElement>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [dragActive, setDragActive] = useState(false);
+  const [success, setSuccess] = useState(false);
 
-  const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
+  const handleUpload = async (file: File) => {
     setLoading(true);
     setError("");
+    setSuccess(false);
 
     try {
       // Get presigned URL
@@ -51,29 +55,87 @@ export function UploadForm({ slug }: { slug: string }) {
 
       if (!trackRes.ok) throw new Error("Failed to save track");
 
+      setSuccess(true);
+      setTimeout(() => setSuccess(false), 2000);
       router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Upload failed");
     } finally {
       setLoading(false);
-      e.target.value = "";
+      if (inputRef.current) {
+        inputRef.current.value = "";
+      }
+    }
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) handleUpload(file);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setDragActive(false);
+    const file = e.dataTransfer.files?.[0];
+    if (file && file.type.startsWith("audio/")) {
+      handleUpload(file);
     }
   };
 
   return (
     <div>
-      <label className="block">
-        <span className="sr-only">Choose file</span>
+      <div
+        className={cn(
+          "relative border-2 border-dashed rounded-lg p-8 text-center transition-colors",
+          dragActive && "border-primary bg-primary/5",
+          loading && "opacity-50 pointer-events-none",
+          success && "border-green-500 bg-green-50"
+        )}
+        onDragOver={(e) => {
+          e.preventDefault();
+          setDragActive(true);
+        }}
+        onDragLeave={() => setDragActive(false)}
+        onDrop={handleDrop}
+      >
         <input
+          ref={inputRef}
           type="file"
           accept="audio/*"
-          onChange={handleUpload}
+          onChange={handleFileChange}
           disabled={loading}
-          className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-black file:text-white hover:file:bg-gray-800 disabled:opacity-50"
+          className="absolute inset-0 w-full h-full opacity-0 cursor-pointer disabled:cursor-not-allowed"
         />
-      </label>
-      {loading && <p className="text-sm text-gray-500 mt-2">Uploading...</p>}
-      {error && <p className="text-sm text-red-500 mt-2">{error}</p>}
+
+        <div className="flex flex-col items-center gap-2">
+          {loading ? (
+            <Loader2 className="h-8 w-8 text-muted-foreground animate-spin" />
+          ) : success ? (
+            <CheckCircle className="h-8 w-8 text-green-500" />
+          ) : (
+            <Upload className="h-8 w-8 text-muted-foreground" />
+          )}
+
+          <div>
+            <p className="font-medium">
+              {loading
+                ? "Uploading..."
+                : success
+                ? "Upload complete!"
+                : "Drop audio file here or click to upload"}
+            </p>
+            {!loading && !success && (
+              <p className="text-sm text-muted-foreground mt-1">
+                Supports MP3, WAV, FLAC, and other audio formats
+              </p>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {error && (
+        <p className="text-sm text-destructive mt-2">{error}</p>
+      )}
     </div>
   );
 }

@@ -2,6 +2,26 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { UserMinus, X, Clock, Users, Mail } from "lucide-react";
+import Link from "next/link";
 
 type Member = {
   id: string;
@@ -52,52 +72,152 @@ export function ManageOrg({ org }: { org: Org }) {
     }
   };
 
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString(undefined, {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    });
+  };
+
   return (
-    <div className="border rounded-lg p-4">
-      <h2 className="text-xl font-semibold mb-4">{org.name}</h2>
-
-      <div className="mb-4">
-        <h3 className="font-medium mb-2">Members</h3>
-        <ul className="space-y-2">
-          {org.members.map((member) => (
-            <li key={member.id} className="flex items-center justify-between">
-              <span>
-                {member.users?.email || "Unknown"}{" "}
-                <span className="text-gray-500 text-sm">({member.role})</span>
-              </span>
-              {member.role !== "owner" && (
-                <button
-                  onClick={() => removeMember(member.id)}
-                  disabled={loading === member.id}
-                  className="text-red-600 text-sm hover:underline disabled:opacity-50"
-                >
-                  {loading === member.id ? "..." : "Remove"}
-                </button>
-              )}
-            </li>
-          ))}
-        </ul>
-      </div>
-
-      {org.invites.length > 0 && (
-        <div>
-          <h3 className="font-medium mb-2">Pending Invites</h3>
-          <ul className="space-y-2">
-            {org.invites.map((invite) => (
-              <li key={invite.id} className="flex items-center justify-between">
-                <span className="text-gray-600">{invite.email}</span>
-                <button
-                  onClick={() => cancelInvite(invite.id)}
-                  disabled={loading === invite.id}
-                  className="text-red-600 text-sm hover:underline disabled:opacity-50"
-                >
-                  {loading === invite.id ? "..." : "Cancel"}
-                </button>
-              </li>
-            ))}
-          </ul>
+    <Card>
+      <CardHeader>
+        <div className="flex items-start justify-between">
+          <div>
+            <CardTitle className="text-xl">{org.name}</CardTitle>
+            <CardDescription className="mt-1">
+              <Link
+                href={`/org/${org.slug}`}
+                className="hover:underline"
+              >
+                /org/{org.slug}
+              </Link>
+            </CardDescription>
+          </div>
+          <div className="flex gap-2">
+            <Badge variant="secondary" className="gap-1">
+              <Users className="h-3 w-3" />
+              {org.members.length}
+            </Badge>
+            {org.invites.length > 0 && (
+              <Badge variant="outline" className="gap-1">
+                <Mail className="h-3 w-3" />
+                {org.invites.length} pending
+              </Badge>
+            )}
+          </div>
         </div>
-      )}
-    </div>
+      </CardHeader>
+
+      <CardContent className="space-y-6">
+        <div>
+          <h3 className="font-medium mb-3 flex items-center gap-2">
+            <Users className="h-4 w-4" />
+            Members
+          </h3>
+          <div className="rounded-md border">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Email</TableHead>
+                  <TableHead>Role</TableHead>
+                  <TableHead className="w-[100px]"></TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {org.members.map((member) => (
+                  <TableRow key={member.id}>
+                    <TableCell className="font-medium">
+                      {member.users?.email || "Unknown"}
+                    </TableCell>
+                    <TableCell>
+                      <Badge
+                        variant={member.role === "owner" ? "default" : "secondary"}
+                      >
+                        {member.role}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      {member.role !== "owner" && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => removeMember(member.id)}
+                          disabled={loading === member.id}
+                          className="h-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+                        >
+                          {loading === member.id ? (
+                            "..."
+                          ) : (
+                            <>
+                              <UserMinus className="h-4 w-4 mr-1" />
+                              Remove
+                            </>
+                          )}
+                        </Button>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        </div>
+
+        {org.invites.length > 0 && (
+          <>
+            <Separator />
+            <div>
+              <h3 className="font-medium mb-3 flex items-center gap-2">
+                <Clock className="h-4 w-4" />
+                Pending Invites
+              </h3>
+              <div className="rounded-md border">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Email</TableHead>
+                      <TableHead>Sent</TableHead>
+                      <TableHead className="w-[100px]"></TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {org.invites.map((invite) => (
+                      <TableRow key={invite.id}>
+                        <TableCell className="font-medium text-muted-foreground">
+                          {invite.email}
+                        </TableCell>
+                        <TableCell className="text-muted-foreground">
+                          {formatDate(invite.created_at)}
+                        </TableCell>
+                        <TableCell>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => cancelInvite(invite.id)}
+                            disabled={loading === invite.id}
+                            className="h-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+                          >
+                            {loading === invite.id ? (
+                              "..."
+                            ) : (
+                              <>
+                                <X className="h-4 w-4 mr-1" />
+                                Cancel
+                              </>
+                            )}
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </div>
+          </>
+        )}
+      </CardContent>
+    </Card>
   );
 }
