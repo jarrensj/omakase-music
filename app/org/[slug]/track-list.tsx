@@ -39,11 +39,13 @@ function TrackNotes({
   slug,
   audioRef,
   isActive,
+  playTrackAt,
 }: {
   trackId: string;
   slug: string;
   audioRef: React.RefObject<HTMLAudioElement | null>;
   isActive: boolean;
+  playTrackAt: (trackId: string, seconds: number) => void;
 }) {
   const [notes, setNotes] = useState<Note[]>([]);
   const [loaded, setLoaded] = useState(false);
@@ -85,10 +87,7 @@ function TrackNotes({
   };
 
   const seekTo = (seconds: number) => {
-    const audio = audioRef.current;
-    if (!audio || !isActive) return;
-    audio.currentTime = seconds;
-    audio.play().catch(() => {});
+    playTrackAt(trackId, seconds);
   };
 
   const addNote = async () => {
@@ -151,9 +150,8 @@ function TrackNotes({
                   {stamp && (
                     <button
                       onClick={() => seekTo(note.start_seconds!)}
-                      disabled={!isActive}
-                      title={isActive ? "Jump to this point" : "Play this track to jump"}
-                      className="shrink-0 px-1.5 py-0.5 text-xs font-mono bg-black text-white rounded hover:bg-gray-800 disabled:opacity-50"
+                      title="Jump to this point"
+                      className="shrink-0 px-1.5 py-0.5 text-xs font-mono bg-black text-white rounded hover:bg-gray-800"
                     >
                       {stamp}
                     </button>
@@ -239,6 +237,7 @@ export function TrackList({ tracks, slug }: { tracks: Track[]; slug: string }) {
   const [playingId, setPlayingId] = useState<string | null>(null);
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const pendingSeekRef = useRef<number | null>(null);
 
   const playTrack = async (trackId: string) => {
     if (playingId === trackId) {
@@ -251,6 +250,29 @@ export function TrackList({ tracks, slug }: { tracks: Track[]; slug: string }) {
     const { url } = await res.json();
     setAudioUrl(url);
     setPlayingId(trackId);
+  };
+
+  const playTrackAt = async (trackId: string, seconds: number) => {
+    if (playingId === trackId && audioRef.current) {
+      audioRef.current.currentTime = seconds;
+      audioRef.current.play().catch(() => {});
+      return;
+    }
+
+    pendingSeekRef.current = seconds;
+    const res = await fetch(`/api/org/${slug}/tracks/${trackId}/url`);
+    const { url } = await res.json();
+    setAudioUrl(url);
+    setPlayingId(trackId);
+  };
+
+  const applyPendingSeek = () => {
+    const audio = audioRef.current;
+    const seek = pendingSeekRef.current;
+    if (!audio || seek === null) return;
+    audio.currentTime = seek;
+    audio.play().catch(() => {});
+    pendingSeekRef.current = null;
   };
 
   const formatDate = (dateString: string) => {
@@ -294,6 +316,7 @@ export function TrackList({ tracks, slug }: { tracks: Track[]; slug: string }) {
               src={audioUrl}
               controls
               autoPlay
+              onLoadedMetadata={applyPendingSeek}
               className="w-full mt-2"
             />
           )}
@@ -302,6 +325,7 @@ export function TrackList({ tracks, slug }: { tracks: Track[]; slug: string }) {
             slug={slug}
             audioRef={audioRef}
             isActive={playingId === track.id}
+            playTrackAt={playTrackAt}
           />
         </div>
       ))}
