@@ -43,10 +43,27 @@ export async function POST(
     return NextResponse.json({ error: "User not found" }, { status: 404 });
   }
 
-  const { content } = await request.json();
+  const { content, startSeconds, endSeconds } = await request.json();
 
   if (!content?.trim()) {
     return NextResponse.json({ error: "Content required" }, { status: 400 });
+  }
+
+  const parseSeconds = (value: unknown): number | null => {
+    if (value === null || value === undefined) return null;
+    const num = typeof value === "number" ? value : Number(value);
+    if (!Number.isFinite(num) || num < 0) return null;
+    return num;
+  };
+
+  const start = parseSeconds(startSeconds);
+  const end = parseSeconds(endSeconds);
+
+  if (end !== null && start !== null && end < start) {
+    return NextResponse.json(
+      { error: "End must be after start" },
+      { status: 400 }
+    );
   }
 
   const { data: note, error } = await supabase
@@ -55,6 +72,8 @@ export async function POST(
       content: content.trim(),
       track_id: trackId,
       author_id: user.id,
+      start_seconds: start,
+      end_seconds: end,
     })
     .select("*, users(email)")
     .single();

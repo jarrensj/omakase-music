@@ -1,12 +1,22 @@
 "use client";
 
-import { useState } from "react";
-import { Play, Square, Download, MessageCircle, Send } from "lucide-react";
+import { useRef, useState } from "react";
+import {
+  Play,
+  Square,
+  Download,
+  MessageCircle,
+  Send,
+  MapPin,
+  X,
+} from "lucide-react";
 
 type Note = {
   id: string;
   content: string;
   created_at: string;
+  start_seconds: number | null;
+  end_seconds: number | null;
   users: { email: string } | null;
 };
 
@@ -17,11 +27,30 @@ type Track = {
   users: { email: string } | null;
 };
 
-function TrackNotes({ trackId, slug }: { trackId: string; slug: string }) {
+const formatTime = (seconds: number) => {
+  const s = Math.max(0, Math.floor(seconds));
+  const m = Math.floor(s / 60);
+  const rem = s % 60;
+  return `${m}:${rem.toString().padStart(2, "0")}`;
+};
+
+function TrackNotes({
+  trackId,
+  slug,
+  audioRef,
+  isActive,
+}: {
+  trackId: string;
+  slug: string;
+  audioRef: React.RefObject<HTMLAudioElement | null>;
+  isActive: boolean;
+}) {
   const [notes, setNotes] = useState<Note[]>([]);
   const [loaded, setLoaded] = useState(false);
   const [newNote, setNewNote] = useState("");
   const [loading, setLoading] = useState(false);
+  const [pendingStart, setPendingStart] = useState<number | null>(null);
+  const [pendingEnd, setPendingEnd] = useState<number | null>(null);
 
   const loadNotes = async () => {
     if (loaded) return;
@@ -31,6 +60,37 @@ function TrackNotes({ trackId, slug }: { trackId: string; slug: string }) {
     setLoaded(true);
   };
 
+  const currentTime = () => {
+    if (!isActive || !audioRef.current) return null;
+    return audioRef.current.currentTime;
+  };
+
+  const captureStart = () => {
+    const t = currentTime();
+    if (t === null) return;
+    setPendingStart(t);
+    if (pendingEnd !== null && t > pendingEnd) setPendingEnd(null);
+  };
+
+  const captureEnd = () => {
+    const t = currentTime();
+    if (t === null) return;
+    if (pendingStart !== null && t < pendingStart) return;
+    setPendingEnd(t);
+  };
+
+  const clearRange = () => {
+    setPendingStart(null);
+    setPendingEnd(null);
+  };
+
+  const seekTo = (seconds: number) => {
+    const audio = audioRef.current;
+    if (!audio || !isActive) return;
+    audio.currentTime = seconds;
+    audio.play().catch(() => {});
+  };
+
   const addNote = async () => {
     if (!newNote.trim()) return;
     setLoading(true);
@@ -38,13 +98,18 @@ function TrackNotes({ trackId, slug }: { trackId: string; slug: string }) {
     const res = await fetch(`/api/org/${slug}/tracks/${trackId}/notes`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ content: newNote }),
+      body: JSON.stringify({
+        content: newNote,
+        startSeconds: pendingStart,
+        endSeconds: pendingEnd,
+      }),
     });
 
     if (res.ok) {
       const note = await res.json();
       setNotes([...notes, note]);
       setNewNote("");
+      clearRange();
     }
 
     setLoading(false);
@@ -53,6 +118,12 @@ function TrackNotes({ trackId, slug }: { trackId: string; slug: string }) {
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleString();
   };
+
+  const rangeLabel = (() => {
+    if (pendingStart === null) return null;
+    if (pendingEnd === null) return `@ ${formatTime(pendingStart)}`;
+    return `${formatTime(pendingStart)} – ${formatTime(pendingEnd)}`;
+  })();
 
   return (
     <div className="mt-3 border-t pt-3">
@@ -66,31 +137,95 @@ function TrackNotes({ trackId, slug }: { trackId: string; slug: string }) {
 
       {loaded && (
         <div className="mt-2 space-y-2">
-          {notes.map((note) => (
-            <div key={note.id} className="text-sm bg-gray-50 p-2 rounded">
-              <p>{note.content}</p>
-              <p className="text-gray-500 text-xs mt-1">
-                {note.users?.email} • {formatDate(note.created_at)}
-              </p>
-            </div>
-          ))}
+          {notes.map((note) => {
+            const hasStart = note.start_seconds !== null;
+            const hasEnd = note.end_seconds !== null;
+            const stamp = hasStart
+              ? hasEnd
+                ? `${formatTime(note.start_seconds!)}–${formatTime(note.end_seconds!)}`
+                : formatTime(note.start_seconds!)
+              : null;
+            return (
+              <div key={note.id} className="text-sm bg-gray-50 p-2 rounded">
+                <div className="flex items-start gap-2">
+                  {stamp && (
+                    <button
+                      onClick={() => seekTo(note.start_seconds!)}
+                      disabled={!isActive}
+                      title={isActive ? "Jump to this point" : "Play this track to jump"}
+                      className="shrink-0 px-1.5 py-0.5 text-xs font-mono bg-black text-white rounded hover:bg-gray-800 disabled:opacity-50"
+                    >
+                      {stamp}
+                    </button>
+                  )}
+                  <p className="flex-1">{note.content}</p>
+                </div>
+                <p className="text-gray-500 text-xs mt-1">
+                  {note.users?.email} • {formatDate(note.created_at)}
+                </p>
+              </div>
+            );
+          })}
 
-          <div className="flex gap-2 mt-2">
-            <input
-              type="text"
-              value={newNote}
-              onChange={(e) => setNewNote(e.target.value)}
-              placeholder="Add a note..."
-              className="flex-1 px-2 py-1 text-sm border rounded"
-              onKeyDown={(e) => e.key === "Enter" && addNote()}
-            />
-            <button
-              onClick={addNote}
-              disabled={loading || !newNote.trim()}
-              className="p-2 bg-black text-white rounded hover:bg-gray-800 disabled:opacity-50"
-            >
-              <Send size={14} />
-            </button>
+          <div className="mt-2 space-y-2">
+            {isActive && (
+              <div className="flex items-center gap-2 text-xs">
+                <button
+                  onClick={captureStart}
+                  className="flex items-center gap-1 px-2 py-1 border rounded hover:bg-gray-100"
+                >
+                  <MapPin size={12} />
+                  {pendingStart === null
+                    ? "Pin start"
+                    : `Start ${formatTime(pendingStart)}`}
+                </button>
+                <button
+                  onClick={captureEnd}
+                  disabled={pendingStart === null}
+                  className="flex items-center gap-1 px-2 py-1 border rounded hover:bg-gray-100 disabled:opacity-50"
+                >
+                  <MapPin size={12} />
+                  {pendingEnd === null
+                    ? "Pin end"
+                    : `End ${formatTime(pendingEnd)}`}
+                </button>
+                {rangeLabel && (
+                  <>
+                    <span className="font-mono text-gray-600">
+                      {rangeLabel}
+                    </span>
+                    <button
+                      onClick={clearRange}
+                      className="flex items-center gap-1 text-gray-500 hover:text-gray-800"
+                    >
+                      <X size={12} />
+                    </button>
+                  </>
+                )}
+              </div>
+            )}
+
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={newNote}
+                onChange={(e) => setNewNote(e.target.value)}
+                placeholder={
+                  isActive
+                    ? "Add a note — pin to a moment or range above"
+                    : "Add a note..."
+                }
+                className="flex-1 px-2 py-1 text-sm border rounded"
+                onKeyDown={(e) => e.key === "Enter" && addNote()}
+              />
+              <button
+                onClick={addNote}
+                disabled={loading || !newNote.trim()}
+                className="p-2 bg-black text-white rounded hover:bg-gray-800 disabled:opacity-50"
+              >
+                <Send size={14} />
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -101,6 +236,7 @@ function TrackNotes({ trackId, slug }: { trackId: string; slug: string }) {
 export function TrackList({ tracks, slug }: { tracks: Track[]; slug: string }) {
   const [playingId, setPlayingId] = useState<string | null>(null);
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
 
   const playTrack = async (trackId: string) => {
     if (playingId === trackId) {
@@ -152,6 +288,7 @@ export function TrackList({ tracks, slug }: { tracks: Track[]; slug: string }) {
           </div>
           {playingId === track.id && audioUrl && (
             <audio
+              ref={audioRef}
               src={audioUrl}
               controls
               autoPlay
@@ -162,7 +299,12 @@ export function TrackList({ tracks, slug }: { tracks: Track[]; slug: string }) {
               }}
             />
           )}
-          <TrackNotes trackId={track.id} slug={slug} />
+          <TrackNotes
+            trackId={track.id}
+            slug={slug}
+            audioRef={audioRef}
+            isActive={playingId === track.id}
+          />
         </div>
       ))}
     </div>
