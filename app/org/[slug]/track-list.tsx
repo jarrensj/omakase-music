@@ -183,18 +183,22 @@ export function TrackList({ tracks, slug }: { tracks: Track[]; slug: string }) {
         >
           <CardContent className="p-4">
             <div className="flex items-center gap-4">
-              <Button
+              <button
+                type="button"
                 onClick={() => playTrack(track.id)}
-                variant={playingId === track.id ? "default" : "outline"}
-                size="icon"
-                className="h-10 w-10 shrink-0"
+                className={cn(
+                  "h-10 w-10 shrink-0 inline-flex items-center justify-center rounded-lg transition-colors",
+                  playingId === track.id
+                    ? "bg-primary text-primary-foreground"
+                    : "border border-input bg-background hover:bg-muted"
+                )}
               >
                 {playingId === track.id ? (
                   <Square className="h-4 w-4" />
                 ) : (
                   <Play className="h-4 w-4" />
                 )}
-              </Button>
+              </button>
 
               <div className="flex-1 min-w-0">
                 <p className="font-medium truncate">{track.filename}</p>
