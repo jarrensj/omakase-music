@@ -62,6 +62,49 @@ export async function inviteToOrg(orgId: string, email: string, invitedByClerkId
   return data;
 }
 
+export async function requestOrgAccess(orgId: string, clerkId: string) {
+  const { data: user } = await supabase
+    .from("users")
+    .select("id")
+    .eq("clerk_id", clerkId)
+    .single();
+
+  if (!user) throw new Error("User not found");
+
+  // Don't allow requests if already a member
+  const { data: existingMembership } = await supabase
+    .from("org_memberships")
+    .select("id")
+    .eq("org_id", orgId)
+    .eq("user_id", user.id)
+    .single();
+
+  if (existingMembership) {
+    throw new Error("Already a member");
+  }
+
+  // Don't allow duplicate requests
+  const { data: existing } = await supabase
+    .from("org_access_requests")
+    .select("id")
+    .eq("org_id", orgId)
+    .eq("user_id", user.id)
+    .single();
+
+  if (existing) {
+    throw new Error("Access already requested");
+  }
+
+  const { data, error } = await supabase
+    .from("org_access_requests")
+    .insert({ org_id: orgId, user_id: user.id })
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
 export async function acceptPendingInvites(clerkId: string, email: string) {
   const { data: user } = await supabase
     .from("users")
