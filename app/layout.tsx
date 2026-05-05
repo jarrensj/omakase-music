@@ -9,6 +9,7 @@ import {
 } from "@clerk/nextjs";
 import "./globals.css";
 import { SyncUser } from "@/components/SyncUser";
+import { OrgSelector } from "@/components/OrgSelector";
 import { Analytics } from "@vercel/analytics/next";
 
 const geistSans = Geist({
@@ -38,13 +39,14 @@ export default function RootLayout({
     >
       <body className="min-h-full flex flex-col">
         <ClerkProvider>
-          <header className="flex justify-end gap-4 p-4">
+          <header className="flex justify-end items-center gap-4 p-4">
             <Show when="signed-out">
               <SignInButton />
               <SignUpButton />
             </Show>
             <Show when="signed-in">
               <SyncUser />
+              <OrgSelector />
               <UserButton />
             </Show>
           </header>
