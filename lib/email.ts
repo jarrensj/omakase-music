@@ -39,3 +39,24 @@ export async function sendAccessRequestEmail(
 
   if (error) throw error;
 }
+
+export async function sendAccessApprovedEmail(
+  userEmail: string,
+  orgName: string,
+  orgSlug: string,
+  baseUrl: string
+) {
+  const resend = new Resend(process.env.RESEND_API_KEY);
+
+  const orgUrl = `${baseUrl}/org/${orgSlug}`;
+
+  const { error } = await resend.emails.send({
+    from: process.env.RESEND_SENDER_EMAIL || "onboarding@resend.dev",
+    to: userEmail,
+    subject: `You now have access to ${orgName}`,
+    html: `<p>Your request to join <strong>${orgName}</strong> on omakase music has been approved.</p>
+<p><a href="${orgUrl}">View ${orgName}</a></p>`,
+  });
+
+  if (error) throw error;
+}

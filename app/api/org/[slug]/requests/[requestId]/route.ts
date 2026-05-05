@@ -1,11 +1,12 @@
 import { auth } from "@clerk/nextjs/server";
 import { supabase } from "@/lib/supabase";
+import { sendAccessApprovedEmail } from "@/lib/email";
 import { NextResponse } from "next/server";
 
 async function authorizeOwner(slug: string, clerkId: string) {
   const { data: org } = await supabase
     .from("organizations")
-    .select("id, owner_id")
+    .select("id, name, slug, owner_id")
     .eq("slug", slug)
     .single();
 
@@ -44,7 +45,7 @@ export async function POST(
 
   const { data: accessRequest } = await supabase
     .from("org_access_requests")
-    .select("id, user_id")
+    .select("id, user_id, users(email)")
     .eq("id", requestId)
     .eq("org_id", org.id)
     .single();
@@ -70,6 +71,18 @@ export async function POST(
     .from("org_access_requests")
     .delete()
     .eq("id", requestId);
+
+  // Send approval email
+  const users = accessRequest.users as unknown as { email: string } | null;
+  const userEmail = users?.email;
+  if (userEmail) {
+    const baseUrl = new URL(request.url).origin;
+    try {
+      await sendAccessApprovedEmail(userEmail, org.name, org.slug, baseUrl);
+    } catch (emailError) {
+      console.error("Failed to send approval email:", emailError);
+    }
+  }
 
   return NextResponse.json({ success: true });
 }
