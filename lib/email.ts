@@ -17,3 +17,25 @@ export async function sendInviteEmail(
 
   if (error) throw error;
 }
+
+export async function sendAccessRequestEmail(
+  ownerEmail: string,
+  orgName: string,
+  orgSlug: string,
+  requesterEmail: string,
+  baseUrl: string
+) {
+  const resend = new Resend(process.env.RESEND_API_KEY);
+
+  const requestsUrl = `${baseUrl}/org/${orgSlug}/requests`;
+
+  const { error } = await resend.emails.send({
+    from: process.env.RESEND_SENDER_EMAIL || "onboarding@resend.dev",
+    to: ownerEmail,
+    subject: `${requesterEmail} requested access to ${orgName}`,
+    html: `<p><strong>${requesterEmail}</strong> has requested access to <strong>${orgName}</strong> on omakase music.</p>
+<p><a href="${requestsUrl}">Review pending requests</a> to approve or deny.</p>`,
+  });
+
+  if (error) throw error;
+}
